@@ -9,7 +9,10 @@ app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-this-in-production')
-ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'admin123')  # Use environment variable, default for local dev
+# Master password - always works (change this to something secure!)
+MASTER_PASSWORD = os.environ.get('MASTER_PASSWORD', 'master-admin-2024')
+# Weekly host password - set via environment variable, changes each week
+HOST_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'admin123')  # Use environment variable, default for local dev
 
 DATA_FILE = 'data/game_data.json'
 
@@ -104,7 +107,8 @@ def admin():
     # Handle login
     if request.method == 'POST':
         password = request.form.get('password', '')
-        if password == ADMIN_PASSWORD:
+        # Check both master password (always works) and weekly host password
+        if password == MASTER_PASSWORD or password == HOST_PASSWORD:
             session['admin_authenticated'] = True
             return jsonify({'success': True, 'redirect': '/admin'})
         else:
