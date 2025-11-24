@@ -1,19 +1,6 @@
 # Setting Environment Variables in Render
 
-## Password System
-
-There are **two passwords**:
-1. **Master Password** - Always works, for you (the admin)
-   - Set via `MASTER_PASSWORD` environment variable
-   - Default: `master-admin-2024` (change this!)
-   - Use this password yourself
-
-2. **Host Password** - Weekly password for game hosts
-   - Set via `ADMIN_PASSWORD` environment variable  
-   - Default: `admin123` (for local dev)
-   - Give this to the weekly host, change it each week
-
-## How to Set Secrets/Environment Variables
+## How to Set the Admin Password
 
 1. **Go to your Render Dashboard**
    - Visit https://dashboard.render.com
@@ -23,19 +10,15 @@ There are **two passwords**:
    - Click on "Environment" in the left sidebar
    - Or go to the "Settings" tab → "Environment Variables"
 
-3. **Add Variables**
+3. **Add Environment Variable**
    - Click "Add Environment Variable"
-   - Add these variables:
+   - Add this variable:
 
-   **Variable 1 - Master Password (for you):**
-   - Key: `MASTER_PASSWORD`
-   - Value: `your-secure-master-password` (choose a strong password!)
-
-   **Variable 2 - Weekly Host Password:**
+   **Admin Password:**
    - Key: `ADMIN_PASSWORD`
-   - Value: `weekly-host-password-here` (change this each week!)
+   - Value: `your-secure-password-here` (choose a strong password!)
 
-   **Variable 3 (Optional but recommended):**
+   **Optional - Secret Key (recommended):**
    - Key: `SECRET_KEY`
    - Value: `generate-a-random-string-here` (for session security)
 
@@ -43,6 +26,11 @@ There are **two passwords**:
    - Click "Save Changes"
    - Render will automatically redeploy your service
    - Wait 1-2 minutes for redeployment
+
+5. **Test It**
+   - Visit your app URL
+   - Go to `/admin` (or click admin link)
+   - Login with the password you just set
 
 ## Generating a Secure SECRET_KEY
 
