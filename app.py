@@ -385,6 +385,7 @@ def user_results():
                              voters=[],
                              votes_data={},
                              revealed_photos=[],
+                             revealed_count=0,
                              total_photos=len(data['photos']))
     
     # Build results for all photos - show pictures, but only reveal guess info if revealed
@@ -507,5 +508,7 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5001))
     # Debug: Print admin password source (remove after testing)
     print(f"Admin password set from: {'Environment variable' if os.environ.get('ADMIN_PASSWORD') else 'Default (admin123)'}")
-    app.run(debug=False, host='0.0.0.0', port=port)
+    app.config['TEMPLATES_AUTO_RELOAD'] = True
+    app.jinja_env.auto_reload = True
+    app.run(debug=True, host='0.0.0.0', port=port)
 
