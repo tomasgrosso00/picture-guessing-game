@@ -505,5 +505,7 @@ if __name__ == '__main__':
     init_game_data()
     # Use PORT environment variable for Render, default to 5001 for local
     port = int(os.environ.get('PORT', 5001))
+    # Debug: Print admin password source (remove after testing)
+    print(f"Admin password set from: {'Environment variable' if os.environ.get('ADMIN_PASSWORD') else 'Default (admin123)'}")
     app.run(debug=False, host='0.0.0.0', port=port)
 
