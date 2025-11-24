@@ -8,8 +8,8 @@ import uuid
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
-app.config['SECRET_KEY'] = 'your-secret-key-change-this-in-production'  # Change this in production
-ADMIN_PASSWORD = 'admin123'  # Change this password
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-change-this-in-production')
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'admin123')  # Use environment variable, default for local dev
 
 DATA_FILE = 'data/game_data.json'
 
