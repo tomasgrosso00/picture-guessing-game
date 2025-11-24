@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Host Login - Data Eng Picture Guessing Game</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style_magical.css') }}">
+</head>
+<body>
+    <div class="magical-emoji">🌈</div>
+    <div class="magical-emoji">🦄</div>
+    <div class="magical-emoji">✨</div>
+    <div class="magical-emoji">🎨</div>
+    <div class="container" style="max-width: 400px;">
+    <h1>Game Host Login 🔐✨</h1>
+    <p style="color: #666; margin-bottom: 20px;">Enter the game host password to access the game host panel.</p>
+    
+    <form id="loginForm">
+        <div class="form-group">
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required placeholder="Enter game host password" autofocus>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Login</button>
+    </form>
+    
+    <div id="message" style="margin-top: 20px;"></div>
+    
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const messageDiv = document.getElementById('message');
+            
+            try {
+                const response = await fetch('/admin', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    messageDiv.innerHTML = '<div class="success">Login successful! Redirecting...</div>';
+                    setTimeout(() => {
+                        window.location.href = '/admin';
+                    }, 500);
+                } else {
+                    messageDiv.innerHTML = '<div class="error">' + result.error + '</div>';
+                }
+            } catch (error) {
+                messageDiv.innerHTML = '<div class="error">Error logging in</div>';
+            }
+        });
+    </script>
+    </div>
+</body>
+</html>
+

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voting - Data Eng Picture Guessing Game</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style_magical.css') }}">
+</head>
+<body>
+    <div class="magical-emoji">🌈</div>
+    <div class="magical-emoji">🦄</div>
+    <div class="magical-emoji">✨</div>
+    <div class="magical-emoji">🎨</div>
+    <div class="container">
+    <h1>Voting 🗳️✨</h1>
+    <p style="text-align: center; color: #666; margin-bottom: 20px;">Guess who owns each picture. Vote silently. 🎯</p>
+    
+    <div class="form-group">
+        <label for="voterName">Your name:</label>
+        <input type="text" id="voterName" required placeholder="Enter your name">
+    </div>
+    
+    <form id="votingForm">
+        <div class="photos-grid">
+            {% for photo in photos %}
+            <div class="photo-card">
+                <img src="{{ url_for('uploaded_file', filename=photo.filename) }}" 
+                     alt="Picture {{ loop.index }}">
+                <div style="font-weight: bold; margin: 10px 0; color: #667eea;">Picture {{ loop.index }}</div>
+                <select name="vote_{{ photo.id }}" required class="vote-select" data-photo-id="{{ photo.id }}">
+                    <option value="">Select...</option>
+                    {% for other_photo in photos %}
+                    <option value="{{ other_photo.submitter }}" data-name="{{ other_photo.submitter }}">{{ other_photo.submitter }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 16px; font-size: 18px; margin-top: 20px;">Submit Votes</button>
+    </form>
+    
+    <div id="voteMessage"></div>
+    
+    <script>
+        // Manage dropdown options - remove selected names from other dropdowns
+        function updateDropdownOptions() {
+            const selects = document.querySelectorAll('.vote-select');
+            const selectedValues = new Map();
+            
+            // Collect all selected values
+            selects.forEach(select => {
+                if (select.value) {
+                    selectedValues.set(select.dataset.photoId, select.value);
+                }
+            });
+            
+            // Update each dropdown
+            selects.forEach(select => {
+                const currentPhotoId = select.dataset.photoId;
+                const currentValue = select.value;
+                const options = select.querySelectorAll('option[data-name]');
+                
+                options.forEach(option => {
+                    const optionValue = option.getAttribute('data-name');
+                    const isSelectedElsewhere = Array.from(selectedValues.entries()).some(
+                        ([photoId, value]) => photoId !== currentPhotoId && value === optionValue
+                    );
+                    
+                    // Hide option if it's selected in another dropdown (but keep it if it's the current selection)
+                    if (isSelectedElsewhere && optionValue !== currentValue) {
+                        option.style.display = 'none';
+                        option.disabled = true;
+                    } else {
+                        option.style.display = '';
+                        option.disabled = false;
+                    }
+                });
+            });
+        }
+        
+        // Add change listeners to all selects
+        document.querySelectorAll('.vote-select').forEach(select => {
+            select.addEventListener('change', updateDropdownOptions);
+        });
+        
+        // Initial update
+        updateDropdownOptions();
+        
+        document.getElementById('votingForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const voterName = document.getElementById('voterName').value.trim();
+            if (!voterName) {
+                alert('Please enter your name');
+                return;
+            }
+            
+            const formData = new FormData(e.target);
+            const votes = {};
+            
+            for (const [key, value] of formData.entries()) {
+                if (key.startsWith('vote_')) {
+                    const photoId = key.replace('vote_', '');
+                    votes[photoId] = value;
+                }
+            }
+            
+            // Check all photos have votes
+            const selects = document.querySelectorAll('select[name^="vote_"]');
+            let allVoted = true;
+            selects.forEach(select => {
+                if (!select.value) allVoted = false;
+            });
+            
+            if (!allVoted) {
+                alert('Please vote for all pictures');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/submit_vote', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ voter_name: voterName, votes: votes })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('voteMessage').innerHTML = 
+                        '<div class="success">' + result.message + '</div>';
+                    document.getElementById('votingForm').style.display = 'none';
+                    // Redirect to user results page
+                    if (result.redirect) {
+                        setTimeout(() => {
+                            window.location.href = result.redirect;
+                        }, 1500);
+                    }
+                } else {
+                    document.getElementById('voteMessage').innerHTML = 
+                        '<div class="error">' + result.error + '</div>';
+                }
+            } catch (error) {
+                document.getElementById('voteMessage').innerHTML = 
+                    '<div class="error">Error submitting votes</div>';
+            }
+        });
+    </script>
+    </div>
+</body>
+</html>
+

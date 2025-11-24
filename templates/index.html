@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Eng Picture Guessing Game</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style_magical.css') }}">
+</head>
+<body>
+    <div class="magical-emoji">🌈</div>
+    <div class="magical-emoji">🦄</div>
+    <div class="magical-emoji">✨</div>
+    <div class="magical-emoji">🎨</div>
+    <div class="container">
+    <h1>Data Eng Picture Guessing Game 🦄✨</h1>
+    
+    {% if phase == 'collection' %}
+    <h2>Upload Your Picture</h2>
+    <p>Pictures received: <strong id="photoCount">{{ photo_count }}</strong></p>
+    
+    <form id="uploadForm" enctype="multipart/form-data">
+        <div class="form-group">
+            <label for="name">Your name:</label>
+            <input type="text" id="name" name="name" required placeholder="Enter your name">
+        </div>
+        <div class="form-group">
+            <label for="photo">Select your picture:</label>
+            <input type="file" id="photo" name="photo" accept="image/*" required>
+        </div>
+        <button type="submit" class="btn btn-primary">Upload Picture</button>
+    </form>
+    
+    {% if voting_enabled and photos %}
+    <div style="margin-top: 30px;">
+        <h3>Pictures for Voting</h3>
+        <div style="max-width: 600px; margin: 0 auto;">
+            <div id="photoCarousel" style="position: relative;">
+                {% for photo in photos %}
+                <div class="carousel-photo" data-index="{{ loop.index0 }}" style="display: {% if loop.index0 == 0 %}block{% else %}none{% endif %};">
+                    <img src="{{ url_for('uploaded_file', filename=photo.filename) }}" 
+                         alt="Photo {{ loop.index }}"
+                         style="width: 100%; max-height: 500px; object-fit: contain; border-radius: 8px; border: 2px solid #ddd;">
+                    <div style="text-align: center; margin-top: 10px; color: #666;">
+                        Picture {{ loop.index }} of {{ photos|length }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% if photos|length > 1 %}
+            <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+                <button id="prevPhoto" class="btn btn-secondary" style="flex: 1; margin-right: 10px;">← Previous</button>
+                <button id="nextPhoto" class="btn btn-secondary" style="flex: 1; margin-left: 10px;">Next →</button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    {% elif phase == 'voting' or voting_enabled %}
+    <h2>Voting Phase</h2>
+    {% if voting_enabled %}
+    <p>Voting is now open! <a href="/voting">Go to voting →</a></p>
+    {% else %}
+    <div style="padding: 20px; background: #fff3e0; border-radius: 8px; text-align: center; margin-top: 20px;">
+        <p style="font-size: 18px; color: #ff9800; margin: 0;">
+            ⏳ Waiting for game host to enable voting...
+        </p>
+        <p style="color: #666; margin-top: 10px; font-size: 14px;">
+            Once voting is enabled by the game host, you'll be able to vote and see the results.
+        </p>
+    </div>
+    {% endif %}
+    {% endif %}
+    
+    <!-- Waiting message for collection phase -->
+    {% if phase == 'collection' and not voting_enabled %}
+    <div id="waitingMessage" style="display: none; padding: 20px; background: #e3f2fd; border-radius: 8px; text-align: center; margin-top: 20px;">
+        <p style="font-size: 18px; color: #1976d2; margin: 0;">
+            ⏳ Waiting for game host to enable voting...
+        </p>
+        <p style="color: #666; margin-top: 10px; font-size: 14px;">
+            Your picture has been uploaded successfully! Once voting is enabled by the game host, you'll be able to vote and see the results.
+        </p>
+    </div>
+    {% endif %}
+    
+    <div id="message"></div>
+    
+    <script>
+        const uploadForm = document.getElementById('uploadForm');
+        if (uploadForm) {
+            uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const messageDiv = document.getElementById('message');
+            
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    messageDiv.innerHTML = '<div class="success">' + result.message + '</div>';
+                    document.getElementById('photoCount').textContent = result.photo_count;
+                    // Hide the upload form after successful submission
+                    const uploadForm = document.getElementById('uploadForm');
+                    if (uploadForm) {
+                        uploadForm.style.display = 'none';
+                    }
+                    // Show waiting message if voting not enabled
+                    setTimeout(() => {
+                        checkVotingStatus();
+                    }, 500);
+                } else {
+                    messageDiv.innerHTML = '<div class="error">' + result.error + '</div>';
+                }
+            } catch (error) {
+                    messageDiv.innerHTML = '<div class="error">Error uploading picture</div>';
+            }
+            });
+        }
+        
+        // Photo carousel navigation
+        {% if voting_enabled and photos and photos|length > 1 %}
+        let currentPhotoIndex = 0;
+        const totalPhotos = {{ photos|length }};
+        const photoElements = document.querySelectorAll('.carousel-photo');
+        
+        function showPhoto(index) {
+            photoElements.forEach((el, i) => {
+                el.style.display = i === index ? 'block' : 'none';
+            });
+        }
+        
+        const prevBtn = document.getElementById('prevPhoto');
+        const nextBtn = document.getElementById('nextPhoto');
+        
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => {
+                currentPhotoIndex = (currentPhotoIndex - 1 + totalPhotos) % totalPhotos;
+                showPhoto(currentPhotoIndex);
+            });
+        }
+        
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => {
+                currentPhotoIndex = (currentPhotoIndex + 1) % totalPhotos;
+                showPhoto(currentPhotoIndex);
+            });
+        }
+        {% endif %}
+        
+        // Function to check voting status
+        let statusCheckInterval = null;
+        
+        async function checkVotingStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                const waitingMessage = document.getElementById('waitingMessage');
+                
+                if (waitingMessage && !data.voting_enabled) {
+                    waitingMessage.style.display = 'block';
+                } else if (waitingMessage && data.voting_enabled) {
+                    waitingMessage.style.display = 'none';
+                    // Stop polling once voting is enabled
+                    if (statusCheckInterval) {
+                        clearInterval(statusCheckInterval);
+                        statusCheckInterval = null;
+                    }
+                    // Reload page to show voting options
+                    location.reload();
+                }
+            } catch (error) {
+                console.error('Error checking voting status:', error);
+            }
+        }
+        
+        // Check voting status periodically if waiting (only when page is visible)
+        {% if phase == 'collection' and not voting_enabled %}
+        const waitingMessage = document.getElementById('waitingMessage');
+        if (waitingMessage) {
+            // Use Page Visibility API - only poll when page is visible
+            let pollInterval = 5000; // 5 seconds (less aggressive)
+            
+            function startPolling() {
+                if (statusCheckInterval) return; // Already polling
+                // Check immediately
+                checkVotingStatus();
+                // Then check every 5 seconds
+                statusCheckInterval = setInterval(checkVotingStatus, pollInterval);
+            }
+            
+            function stopPolling() {
+                if (statusCheckInterval) {
+                    clearInterval(statusCheckInterval);
+                    statusCheckInterval = null;
+                }
+            }
+            
+            // Start polling if page is visible
+            if (!document.hidden) {
+                startPolling();
+            }
+            
+            // Handle visibility changes
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    stopPolling();
+                } else {
+                    startPolling();
+                }
+            });
+            
+            // Also check when user focuses the window
+            window.addEventListener('focus', () => {
+                if (!statusCheckInterval) {
+                    checkVotingStatus();
+                    startPolling();
+                }
+            });
+        }
+        {% endif %}
+    </script>
+    </div>
+</body>
+</html>
+

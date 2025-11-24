@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Host Panel - Data Eng Picture Guessing Game</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style_magical.css') }}">
+</head>
+<body>
+    <div class="magical-emoji">🌈</div>
+    <div class="magical-emoji">🦄</div>
+    <div class="magical-emoji">✨</div>
+    <div class="magical-emoji">🎨</div>
+    <div class="container">
+    <h1>Game Host Panel 🎮✨</h1>
+    
+    <!-- Status Section -->
+    <div style="margin-bottom: 30px; padding: 20px; background: #f5f5f5; border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+            <div>
+                <p><strong>Pictures received:</strong> {{ photo_count }}</p>
+                <p><strong>Status:</strong> 
+                    {% if voting_enabled %}
+                    <span style="color: green;">Voting Enabled</span>
+                    {% else %}
+                    <span style="color: orange;">Collection Phase</span>
+                    {% endif %}
+                </p>
+                {% if voters %}
+                <p><strong>Voters:</strong> {{ voters|length }} person(s) have voted</p>
+                {% endif %}
+            </div>
+            <div>
+                <a href="/" class="btn btn-primary" style="text-decoration: none; display: inline-block;">
+                    View Main Page
+                </a>
+                <button id="logoutBtn" class="btn btn-secondary" style="margin-left: 10px;">
+                    Logout
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Uploaded Pictures Section -->
+    {% if photos %}
+    <div style="margin-bottom: 30px; padding: 20px; background: #e3f2fd; border-radius: 8px; border: 2px solid #2196f3;">
+        <h2>📸 Uploaded Pictures</h2>
+        <p style="color: #666; margin-bottom: 15px;">All pictures that have been submitted:</p>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px;">
+            {% for photo in photos %}
+            <div style="background: white; padding: 15px; border-radius: 8px; border: 2px solid #ddd; text-align: center;">
+                <img src="{{ url_for('uploaded_file', filename=photo.filename) }}" 
+                     alt="{{ photo.submitter }}"
+                     style="width: 100%; height: 150px; object-fit: cover; border-radius: 5px; margin-bottom: 10px;">
+                <div style="font-weight: bold; color: #333;">{{ photo.submitter }}</div>
+                <div style="font-size: 12px; color: #999; margin-top: 5px;">
+                    Uploaded: {{ photo.uploaded_at[:10] if photo.uploaded_at else 'N/A' }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div style="margin-bottom: 30px; padding: 20px; background: #fff3e0; border-radius: 8px; text-align: center;">
+        <p style="color: #666;">No pictures uploaded yet.</p>
+    </div>
+    {% endif %}
+    
+    <!-- Game Controls -->
+    <div style="margin-bottom: 30px; padding: 20px; background: #f5f5f5; border-radius: 8px;">
+        <h3>Game Controls</h3>
+        
+        {% if not voting_enabled %}
+            {% if photo_count >= 2 %}
+            <button id="enableVotingBtn" class="btn btn-success" style="margin-top: 10px;">
+                Enable Voting
+            </button>
+            <p style="margin-top: 10px; color: #666; font-size: 14px;">
+                Once enabled, players will be able to vote. You need at least 2 pictures to enable voting.
+            </p>
+            {% else %}
+            <p style="color: #666;">
+                Need at least 2 pictures to enable voting. Currently have {{ photo_count }} picture(s).
+            </p>
+            {% endif %}
+        {% else %}
+            <button id="disableVotingBtn" class="btn btn-secondary" style="margin-top: 10px;">
+                Disable Voting
+            </button>
+            <p style="margin-top: 10px; color: #666; font-size: 14px;">
+                Voting is currently enabled. Players can now vote.
+            </p>
+        {% endif %}
+    </div>
+    
+    {% if voters and not photos_with_guesses %}
+    <div style="margin-bottom: 30px; padding: 15px; background: #fff3e0; border-radius: 8px;">
+        <p><strong>Voting in progress...</strong></p>
+        <p>Voters so far: {{ voters|join(', ') }}</p>
+    </div>
+    {% endif %}
+    
+    <!-- Photo Reveal Controls (show if there are photos and voting is enabled or votes exist) -->
+    {% if photos and (voting_enabled or voters) %}
+    <div style="margin-bottom: 30px; padding: 20px; background: #e8f5e9; border-radius: 8px;">
+        <h2>Picture Reveal Controls</h2>
+        <p style="color: #666; margin-bottom: 15px;">
+            Reveal or un-reveal pictures for players. Once revealed, they will appear on the player results page.
+        </p>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+            {% for photo in photos %}
+            {% set is_revealed = photo.id in revealed_photos %}
+            <button class="reveal-photo-btn btn {% if is_revealed %}btn-warning{% else %}btn-success{% endif %}" 
+                    data-photo-id="{{ photo.id }}"
+                    data-is-revealed="{{ 'true' if is_revealed else 'false' }}">
+                {% if is_revealed %}
+                ↶ Un-reveal {{ photo.submitter }}
+                {% else %}
+                ✓ Reveal {{ photo.submitter }}
+                {% endif %}
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Cross Table: Guessers vs Photos - Always show full matrix for game host -->
+    {% if photos and voters %}
+    <div style="margin-bottom: 30px;">
+        <h2>Voting Matrix (Full View)</h2>
+        <p style="color: #666; margin-bottom: 15px;">
+            Shows who guessed correctly (✓) and incorrectly (✗) for each picture. 
+            <span style="color: #4caf50;">Green border</span> = Revealed to players | 
+            <span style="color: #ff9800;">Orange border</span> = Not revealed yet
+        </p>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; background: white; border: 2px solid #ddd;">
+                <thead>
+                    <tr style="background: #667eea; color: white;">
+                        <th style="padding: 12px; text-align: left; border: 1px solid #ddd; position: sticky; left: 0; background: #667eea; z-index: 10;">
+                            Voter
+                        </th>
+                        {% for photo in photos %}
+                        {% set is_revealed = photo.id in revealed_photos %}
+                        <th style="padding: 12px; text-align: center; border: 1px solid #ddd; min-width: 120px; {% if is_revealed %}border-top: 4px solid #4caf50;{% else %}border-top: 4px solid #ff9800;{% endif %}">
+                            <div style="font-weight: bold;">{{ photo.submitter }}</div>
+                            <div style="font-size: 11px; font-weight: normal; opacity: 0.9; margin-top: 5px;">
+                                {% if is_revealed %}
+                                <span style="color: #4caf50; font-weight: bold;">✓ Revealed</span>
+                                {% else %}
+                                <span style="color: #ff9800; font-weight: bold;">⏳ Hidden</span>
+                                {% endif %}
+                            </div>
+                        </th>
+                        {% endfor %}
+                        <th style="padding: 12px; text-align: center; border: 1px solid #ddd; background: #4a5568; font-weight: bold; min-width: 80px;">
+                            Total ✓
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for voter in voters %}
+                    {% set voter_votes = votes_data.get(voter, {}) %}
+                    {% set voter_correct_count = 0 %}
+                    {% for photo in photos %}
+                        {% set voter_guess = voter_votes.get(photo.id, '') %}
+                        {% if voter_guess == photo.submitter %}
+                            {% set voter_correct_count = voter_correct_count + 1 %}
+                        {% endif %}
+                    {% endfor %}
+                    <tr>
+                        <td style="padding: 12px; font-weight: bold; border: 1px solid #ddd; background: #f5f5f5; position: sticky; left: 0; z-index: 5;">
+                            {{ voter }}
+                        </td>
+                        {% for photo in photos %}
+                        {% set is_revealed = photo.id in revealed_photos %}
+                        {% set voter_guess = voter_votes.get(photo.id, '') %}
+                        <td style="padding: 12px; text-align: center; border: 1px solid #ddd; vertical-align: middle; {% if is_revealed %}background: #f1f8f4;{% else %}background: #fff8e1;{% endif %}">
+                            {% if voter_guess %}
+                                {% if voter_guess == photo.submitter %}
+                                <span style="font-size: 24px; color: #4caf50;" title="Correct! Guessed: {{ photo.submitter }}">✓</span>
+                                {% else %}
+                                <span style="font-size: 24px; color: #f44336;" title="Incorrect. Guessed: {{ voter_guess }}">✗</span>
+                                {% endif %}
+                            {% else %}
+                                <span style="color: #999;">—</span>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                        <td style="padding: 12px; text-align: center; border: 1px solid #ddd; background: #e8f5e9; font-weight: bold; color: #2e7d32;">
+                            {{ voter_correct_count }}/{{ photos|length }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    <tr style="background: #f0f0f0; font-weight: bold;">
+                        <td style="padding: 12px; border: 1px solid #ddd; position: sticky; left: 0; background: #f0f0f0; z-index: 5;">
+                            Total ✓
+                        </td>
+                        {% for photo in photos %}
+                        {% set photo_correct_count = 0 %}
+                        {% for voter in voters %}
+                            {% set voter_votes = votes_data.get(voter, {}) %}
+                            {% set voter_guess = voter_votes.get(photo.id, '') %}
+                            {% if voter_guess == photo.submitter %}
+                                {% set photo_correct_count = photo_correct_count + 1 %}
+                            {% endif %}
+                        {% endfor %}
+                        <td style="padding: 12px; text-align: center; border: 1px solid #ddd; background: #e8f5e9; color: #2e7d32;">
+                            {{ photo_correct_count }}/{{ voters|length }}
+                        </td>
+                        {% endfor %}
+                        <td style="padding: 12px; text-align: center; border: 1px solid #ddd; background: #c8e6c9; font-weight: bold; color: #1b5e20;">
+                            {% set grand_total = 0 %}
+                            {% for voter in voters %}
+                                {% set voter_votes = votes_data.get(voter, {}) %}
+                                {% for photo in photos %}
+                                    {% set voter_guess = voter_votes.get(photo.id, '') %}
+                                    {% if voter_guess == photo.submitter %}
+                                        {% set grand_total = grand_total + 1 %}
+                                    {% endif %}
+                                {% endfor %}
+                            {% endfor %}
+                            {{ grand_total }}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Detailed Results - All Photos -->
+    {% if photos_with_guesses %}
+    <div style="margin-bottom: 30px;">
+        <h2>Detailed Results - All Pictures</h2>
+        
+        {% for item in photos_with_guesses %}
+        <div style="margin-bottom: 40px; padding: 20px; background: #f9f9f9; border-radius: 12px; border: 2px solid #ddd;">
+            <div style="display: flex; gap: 30px; align-items: flex-start;">
+                <!-- Photo -->
+                <div style="flex: 0 0 300px;">
+                    <img src="{{ url_for('uploaded_file', filename=item.photo.filename) }}" 
+                         alt="Photo from {{ item.photo.submitter }}"
+                         style="width: 100%; max-height: 400px; object-fit: contain; border-radius: 8px; border: 2px solid #ccc;">
+                    {% if item.photo.id in revealed_photos %}
+                    <div style="margin-top: 10px; padding: 8px; background: #4caf50; color: white; border-radius: 8px; text-align: center; font-weight: bold;">
+                        ✓ Revealed to Players
+                    </div>
+                    {% else %}
+                    <div style="margin-top: 10px; padding: 8px; background: #ff9800; color: white; border-radius: 8px; text-align: center; font-weight: bold;">
+                        ⏳ Not Revealed Yet
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Voting Details -->
+                <div style="flex: 1;">
+                    <h2 style="margin-top: 0; color: #667eea;">
+                        Picture Owner: <span style="color: #333;">{{ item.photo.submitter }}</span>
+                    </h2>
+                    
+                    <!-- Correct Guesses -->
+                    <div style="margin-bottom: 20px;">
+                        <h3 style="color: #4caf50; margin-bottom: 10px;">
+                            ✓ Correct Guesses ({{ item.correct_guessers|length }})
+                        </h3>
+                        {% if item.correct_guessers %}
+                        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                            {% for guesser in item.correct_guessers %}
+                            <span style="padding: 8px 15px; background: #c8e6c9; color: #2e7d32; border-radius: 20px; font-weight: 500;">
+                                {{ guesser }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p style="color: #999; font-style: italic;">No one guessed correctly</p>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Incorrect Guesses -->
+                    <div>
+                        <h3 style="color: #f44336; margin-bottom: 10px;">
+                            ✗ Incorrect Guesses ({{ item.incorrect_guessers|length }})
+                        </h3>
+                        {% if item.incorrect_guessers %}
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            {% for guesser_info in item.incorrect_guessers %}
+                            <div style="padding: 10px; background: #ffcdd2; border-radius: 8px; border-left: 4px solid #f44336;">
+                                <strong style="color: #c62828;">{{ guesser_info.name }}</strong>
+                                <span style="color: #666;"> guessed </span>
+                                <strong style="color: #c62828;">{{ guesser_info.guessed }}</strong>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p style="color: #999; font-style: italic;">Everyone guessed correctly!</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <!-- Danger Zone -->
+    <div style="margin-top: 40px; padding: 20px; background: #ffebee; border-radius: 8px; border: 2px solid #f44336;">
+        <h3 style="color: #c62828;">Danger Zone</h3>
+        <p style="color: #666; margin-bottom: 15px;">
+            This will permanently delete all pictures, votes, and reset the game to start fresh.
+        </p>
+        <button id="restartGameBtn" class="btn" style="background: #f44336; color: white; border: none;">
+            Restart Game
+        </button>
+        <p style="font-size: 12px; color: #999; margin-top: 10px;">
+            ⚠️ This action cannot be undone
+        </p>
+    </div>
+    
+    <div id="message" style="margin-top: 20px;"></div>
+    
+    <script>
+        const enableVotingBtn = document.getElementById('enableVotingBtn');
+        if (enableVotingBtn) {
+            enableVotingBtn.addEventListener('click', async () => {
+                if (confirm('Enable voting? Players will be able to vote once enabled.')) {
+                    try {
+                        const response = await fetch('/enable_voting', { method: 'POST' });
+                        const result = await response.json();
+                        if (result.success) {
+                            document.getElementById('message').innerHTML = 
+                                '<div class="success">' + result.message + '</div>';
+                            setTimeout(() => location.reload(), 1000);
+                        } else {
+                            document.getElementById('message').innerHTML = 
+                                '<div class="error">' + result.error + '</div>';
+                        }
+                    } catch (error) {
+                        document.getElementById('message').innerHTML = 
+                            '<div class="error">Error enabling voting</div>';
+                    }
+                }
+            });
+        }
+        
+        const disableVotingBtn = document.getElementById('disableVotingBtn');
+        if (disableVotingBtn) {
+            disableVotingBtn.addEventListener('click', async () => {
+                if (confirm('Disable voting? Players will no longer be able to vote.')) {
+                    try {
+                        const response = await fetch('/disable_voting', { method: 'POST' });
+                        const result = await response.json();
+                        if (result.success) {
+                            document.getElementById('message').innerHTML = 
+                                '<div class="success">' + result.message + '</div>';
+                            setTimeout(() => location.reload(), 1000);
+                        } else {
+                            document.getElementById('message').innerHTML = 
+                                '<div class="error">' + result.error + '</div>';
+                        }
+                    } catch (error) {
+                        document.getElementById('message').innerHTML = 
+                            '<div class="error">Error disabling voting</div>';
+                    }
+                }
+            });
+        }
+        
+        // Photo reveal/unreveal buttons
+        document.querySelectorAll('.reveal-photo-btn').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const photoId = this.dataset.photoId;
+                const isRevealed = this.dataset.isRevealed === 'true';
+                const endpoint = isRevealed ? '/unreveal_photo' : '/reveal_photo';
+                const action = isRevealed ? 'un-reveal' : 'reveal';
+                
+                try {
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ photo_id: photoId })
+                    });
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        document.getElementById('message').innerHTML = 
+                            '<div class="success">Picture ' + action + 'ed! Players will ' + (isRevealed ? 'no longer' : 'now') + ' see it.</div>';
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        document.getElementById('message').innerHTML = 
+                            '<div class="error">' + (result.error || `Failed to ${action} picture`) + '</div>';
+                    }
+                } catch (error) {
+                    document.getElementById('message').innerHTML = 
+                            '<div class="error">Error ' + action + 'ing picture</div>';
+                }
+            });
+        });
+        
+        const restartGameBtn = document.getElementById('restartGameBtn');
+        if (restartGameBtn) {
+            restartGameBtn.addEventListener('click', async () => {
+                const firstConfirm = confirm('⚠️ WARNING: This will delete ALL photos and votes!\n\nAre you sure you want to restart the game?');
+                if (!firstConfirm) return;
+                
+                const secondConfirm = confirm('This action cannot be undone!\n\nType OK to confirm, or Cancel to abort.');
+                if (!secondConfirm) return;
+                
+                const finalConfirm = prompt('Type "RESTART" to confirm restarting the game:');
+                if (finalConfirm !== 'RESTART') {
+                    alert('Restart cancelled. Game data preserved.');
+                    return;
+                }
+                
+                try {
+                    const response = await fetch('/restart_game', { method: 'POST' });
+                    const result = await response.json();
+                    if (result.success) {
+                        alert('Game restarted successfully! Redirecting...');
+                        window.location.href = '/';
+                    } else {
+                        document.getElementById('message').innerHTML = 
+                            '<div class="error">' + result.error + '</div>';
+                    }
+                } catch (error) {
+                    document.getElementById('message').innerHTML = 
+                        '<div class="error">Error restarting game</div>';
+                }
+            });
+        }
+        
+        // Logout button
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async () => {
+                try {
+                    const response = await fetch('/admin/logout', { method: 'POST' });
+                    const result = await response.json();
+                    if (result.success) {
+                        window.location.href = '/admin';
+                    }
+                } catch (error) {
+                    console.error('Error logging out');
+                }
+            });
+        }
+    </script>
+    </div>
+</body>
+</html>

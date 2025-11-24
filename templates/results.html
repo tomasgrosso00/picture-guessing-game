@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Results - Data Eng Picture Guessing Game</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+    <h1>Results</h1>
+    
+    <div class="winner-section">
+        <h2>Winner: {{ results.winner }}</h2>
+        <p>With {{ results.scores[results.winner].correct }}/{{ results.scores[results.winner].total }} correct guesses 
+           ({{ results.scores[results.winner].percentage }}%)</p>
+    </div>
+    
+    <div>
+        <h3>Leaderboard</h3>
+        <table class="scores-table">
+            <thead>
+                <tr>
+                    <th>Position</th>
+                    <th>Name</th>
+                    <th>Correct</th>
+                    <th>Percentage</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for voter_name, score_data in results.scores.items() %}
+                <tr {% if voter_name == results.winner %}class="winner-row"{% endif %}>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ voter_name }}</td>
+                    <td>{{ score_data.correct }}/{{ score_data.total }}</td>
+                    <td>{{ score_data.percentage }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div style="margin-top: 30px;">
+        <h3>Picture Reveal</h3>
+        <div class="photos-grid">
+            {% for photo in photos %}
+            <div class="photo-card">
+                <img src="{{ url_for('uploaded_file', filename=photo.filename) }}" 
+                     alt="Photo">
+                <div style="font-weight: bold; color: #667eea; font-size: 18px; margin-top: 10px;">{{ photo.submitter }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    </div>
+</body>
+</html>
+
