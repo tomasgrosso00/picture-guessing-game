@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, send_from_directory, session
+from flask import Flask, render_template, request, jsonify, send_from_directory, session, url_for
 import os
 import json
 from datetime import datetime
@@ -501,6 +501,76 @@ def api_status():
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+@app.route('/mini-game')
+def mini_game():
+    """Simple endless jumper mini-game for waiting users"""
+    data = load_game_data()
+    golden_dot_image = data.get('golden_dot_image', None)
+    return render_template('mini_game.html', golden_dot_image=golden_dot_image)
+
+@app.route('/admin/upload_golden_dot', methods=['POST'])
+def upload_golden_dot():
+    """Upload golden dot image for mini-game (admin only)"""
+    # Check authentication
+    if not session.get('admin_authenticated', False):
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    if 'image' not in request.files:
+        return jsonify({'error': 'No image file provided'}), 400
+    
+    file = request.files['image']
+    
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    
+    # Save file
+    filename = f"golden_dot_{uuid.uuid4()}_{secure_filename(file.filename)}"
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(filepath)
+    
+    # Save to game data
+    data = load_game_data()
+    data['golden_dot_image'] = filename
+    save_game_data(data)
+    
+    return jsonify({
+        'success': True,
+        'message': 'Golden dot image uploaded successfully!',
+        'filename': filename
+    })
+
+@app.route('/api/golden_dot_image')
+def get_golden_dot_image():
+    """Get golden dot image URL"""
+    data = load_game_data()
+    golden_dot_image = data.get('golden_dot_image', None)
+    if golden_dot_image:
+        return jsonify({'url': url_for('uploaded_file', filename=golden_dot_image)})
+    return jsonify({'url': None})
+
+@app.route('/admin/remove_golden_dot', methods=['POST'])
+def remove_golden_dot():
+    """Remove golden dot image (admin only)"""
+    # Check authentication
+    if not session.get('admin_authenticated', False):
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = load_game_data()
+    if 'golden_dot_image' in data:
+        # Optionally delete the file
+        old_filename = data['golden_dot_image']
+        old_filepath = os.path.join(app.config['UPLOAD_FOLDER'], old_filename)
+        try:
+            if os.path.exists(old_filepath):
+                os.remove(old_filepath)
+        except Exception as e:
+            print(f"Error deleting golden dot image: {e}")
+        
+        del data['golden_dot_image']
+        save_game_data(data)
+    
+    return jsonify({'success': True, 'message': 'Golden dot image removed'})
 
 if __name__ == '__main__':
     init_game_data()

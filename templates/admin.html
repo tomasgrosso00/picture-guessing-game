@@ -12,7 +12,12 @@
     <div class="magical-emoji">✨</div>
     <div class="magical-emoji">🎨</div>
     <div class="container">
-    <h1>Game Host Panel 🎮✨</h1>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h1 style="margin: 0;">Game Host Panel 🎮✨</h1>
+        <button onclick="location.reload()" class="btn btn-secondary" style="padding: 10px 20px; border: none; border-radius: 8px; background: #757575; color: white; cursor: pointer; font-size: 14px;">
+            🔄 Refresh
+        </button>
+    </div>
     
     <!-- Status Section -->
     <div style="margin-bottom: 30px; padding: 20px; background: #f5f5f5; border-radius: 8px;">
@@ -44,20 +49,43 @@
     <!-- Uploaded Pictures Section -->
     {% if photos %}
     <div style="margin-bottom: 30px; padding: 20px; background: #e3f2fd; border-radius: 8px; border: 2px solid #2196f3;">
-        <h2>📸 Uploaded Pictures</h2>
-        <p style="color: #666; margin-bottom: 15px;">All pictures that have been submitted:</p>
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+            <h2 style="margin: 0;">📸 Uploaded Pictures</h2>
+            <button id="togglePicturesBtn" class="btn btn-secondary" style="margin-left: 10px;">
+                <span id="togglePicturesText">Show Pictures</span>
+            </button>
+        </div>
+        <p style="color: #666; margin-bottom: 15px;">All pictures that have been submitted (hidden by default so you can play too!):</p>
+        
+        <!-- Participant names list (always visible) -->
+        <div id="participantsList" style="margin-bottom: 15px; padding: 15px; background: #e8f5e9; border-radius: 8px;">
+            <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #2e7d32;">📋 Participants ({{ photos|length }}):</h3>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                {% for photo in photos %}
+                <span style="padding: 6px 12px; background: white; border-radius: 15px; font-weight: 500; color: #333; border: 1px solid #4caf50;">
+                    {{ photo.submitter }}
+                </span>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div id="picturesContainer" style="display: none; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px;">
             {% for photo in photos %}
             <div style="background: white; padding: 15px; border-radius: 8px; border: 2px solid #ddd; text-align: center;">
                 <img src="{{ url_for('uploaded_file', filename=photo.filename) }}" 
                      alt="{{ photo.submitter }}"
-                     style="width: 100%; height: 150px; object-fit: cover; border-radius: 5px; margin-bottom: 10px;">
-                <div style="font-weight: bold; color: #333;">{{ photo.submitter }}</div>
+                     class="admin-photo"
+                     data-photo-id="{{ photo.id }}"
+                     style="width: 100%; height: 150px; object-fit: cover; border-radius: 5px; margin-bottom: 10px; cursor: pointer;">
+                <div class="photo-submitter" style="font-weight: bold; color: #333;">{{ photo.submitter }}</div>
                 <div style="font-size: 12px; color: #999; margin-top: 5px;">
                     Uploaded: {{ photo.uploaded_at[:10] if photo.uploaded_at else 'N/A' }}
                 </div>
             </div>
             {% endfor %}
+        </div>
+        <div id="picturesHiddenMessage" style="display: block; padding: 15px; background: #fff3e0; border-radius: 8px; text-align: center; margin-top: 15px;">
+            <p style="color: #666; margin: 0;">Pictures are hidden so you can play the game! Click "Show Pictures" to reveal them.</p>
         </div>
     </div>
     {% else %}
@@ -146,7 +174,8 @@
                             <div style="margin-bottom: 5px;">
                                 <img src="{{ url_for('uploaded_file', filename=photo.filename) }}" 
                                      alt="Picture thumbnail"
-                                     style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px; border: 2px solid white;">
+                                     class="admin-thumbnail"
+                                     style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px; border: 2px solid white; cursor: pointer;">
                             </div>
                             <div style="font-weight: bold; margin-top: 5px;">{{ photo.submitter }}</div>
                             <div style="font-size: 11px; font-weight: normal; opacity: 0.9; margin-top: 5px;">
@@ -246,7 +275,8 @@
                 <div style="flex: 0 0 300px;">
                     <img src="{{ url_for('uploaded_file', filename=item.photo.filename) }}" 
                          alt="Photo from {{ item.photo.submitter }}"
-                         style="width: 100%; max-height: 400px; object-fit: contain; border-radius: 8px; border: 2px solid #ccc;">
+                         class="admin-detail-photo"
+                         style="width: 100%; max-height: 400px; object-fit: contain; border-radius: 8px; border: 2px solid #ccc; cursor: pointer;">
                     {% if item.photo.id in revealed_photos %}
                     <div style="margin-top: 10px; padding: 8px; background: #4caf50; color: white; border-radius: 8px; text-align: center; font-weight: bold;">
                         ✓ Revealed to Players
@@ -308,6 +338,57 @@
     </div>
     {% endif %}
     
+    <!-- Mini-Game Golden Dot Settings -->
+    <div style="margin-top: 40px; padding: 20px; background: #fff9c4; border-radius: 8px; border: 2px solid #ffd700;">
+        <h3 style="color: #f57c00;">⭐ Mini-Game: Golden Dot</h3>
+        <p style="color: #666; margin-bottom: 15px;">
+            Upload an image for the "golden dot" that appears in the mini-game between 10-20 seconds. Golden dots are worth extra points!
+        </p>
+        <div style="margin-bottom: 15px;">
+            <input type="file" id="goldenDotInput" accept="image/*" style="display: none;">
+            <button id="uploadGoldenDotBtn" class="btn btn-warning" onclick="document.getElementById('goldenDotInput').click()">
+                Upload Golden Dot Image
+            </button>
+            <button id="removeGoldenDotBtn" class="btn btn-secondary" style="display: none; margin-left: 10px;">
+                Remove Golden Dot
+            </button>
+        </div>
+        <div id="goldenDotPreview" style="margin-top: 15px;"></div>
+        {% if photos %}
+        {% set data = load_game_data() %}
+        {% if data.get('golden_dot_image') %}
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const goldenDotImage = '{{ data.get("golden_dot_image") }}';
+                if (goldenDotImage) {
+                    const preview = document.getElementById('goldenDotPreview');
+                    preview.innerHTML = `<img src="/uploads/${goldenDotImage}" style="max-width: 200px; max-height: 200px; border-radius: 8px; border: 3px solid #ffd700;">`;
+                    document.getElementById('removeGoldenDotBtn').style.display = 'inline-block';
+                }
+            });
+        </script>
+        {% endif %}
+        {% endif %}
+    </div>
+    
+    <!-- Mini-Game Golden Dot Settings -->
+    <div style="margin-top: 40px; padding: 20px; background: #fff9c4; border-radius: 8px; border: 2px solid #ffd700;">
+        <h3 style="color: #f57c00;">⭐ Mini-Game: Golden Dot</h3>
+        <p style="color: #666; margin-bottom: 15px;">
+            Upload an image for the "golden dot" that appears in the mini-game between 10-20 seconds. Golden dots are worth extra points!
+        </p>
+        <div style="margin-bottom: 15px;">
+            <input type="file" id="goldenDotInput" accept="image/*" style="display: none;">
+            <button id="uploadGoldenDotBtn" class="btn btn-warning" onclick="document.getElementById('goldenDotInput').click()">
+                Upload Golden Dot Image
+            </button>
+            <button id="removeGoldenDotBtn" class="btn btn-secondary" style="display: none; margin-left: 10px;">
+                Remove Golden Dot
+            </button>
+        </div>
+        <div id="goldenDotPreview" style="margin-top: 15px;"></div>
+    </div>
+    
     <!-- Danger Zone -->
     <div style="margin-top: 40px; padding: 20px; background: #ffebee; border-radius: 8px; border: 2px solid #f44336;">
         <h3 style="color: #c62828;">Danger Zone</h3>
@@ -325,6 +406,46 @@
     <div id="message" style="margin-top: 20px;"></div>
     
     <script>
+        // Toggle pictures visibility
+        const togglePicturesBtn = document.getElementById('togglePicturesBtn');
+        const picturesContainer = document.getElementById('picturesContainer');
+        const picturesHiddenMessage = document.getElementById('picturesHiddenMessage');
+        const togglePicturesText = document.getElementById('togglePicturesText');
+        let picturesVisible = false;
+        
+        if (togglePicturesBtn && picturesContainer) {
+            // Initialize: hide pictures by default
+            picturesContainer.style.display = 'none';
+            picturesHiddenMessage.style.display = 'block';
+            
+            togglePicturesBtn.addEventListener('click', () => {
+                picturesVisible = !picturesVisible;
+                if (picturesVisible) {
+                    picturesContainer.style.display = 'grid';
+                    if (picturesHiddenMessage) picturesHiddenMessage.style.display = 'none';
+                    togglePicturesText.textContent = 'Hide Pictures';
+                } else {
+                    picturesContainer.style.display = 'none';
+                    if (picturesHiddenMessage) picturesHiddenMessage.style.display = 'block';
+                    togglePicturesText.textContent = 'Show Pictures';
+                }
+            });
+        }
+        
+        // Click to enlarge pictures
+        document.querySelectorAll('.admin-photo').forEach(img => {
+            img.addEventListener('click', function() {
+                const modal = document.createElement('div');
+                modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; display: flex; align-items: center; justify-content: center; cursor: pointer;';
+                const enlargedImg = document.createElement('img');
+                enlargedImg.src = this.src;
+                enlargedImg.style.cssText = 'max-width: 90%; max-height: 90%; object-fit: contain; border-radius: 8px;';
+                modal.appendChild(enlargedImg);
+                document.body.appendChild(modal);
+                modal.addEventListener('click', () => modal.remove());
+            });
+        });
+        
         const enableVotingBtn = document.getElementById('enableVotingBtn');
         if (enableVotingBtn) {
             enableVotingBtn.addEventListener('click', async () => {
@@ -434,6 +555,76 @@
             });
         }
         
+        // Golden dot image upload
+        const goldenDotInput = document.getElementById('goldenDotInput');
+        const uploadGoldenDotBtn = document.getElementById('uploadGoldenDotBtn');
+        const removeGoldenDotBtn = document.getElementById('removeGoldenDotBtn');
+        const goldenDotPreview = document.getElementById('goldenDotPreview');
+        
+        // Load existing golden dot image on page load
+        fetch('/api/golden_dot_image')
+            .then(response => response.json())
+            .then(data => {
+                if (data.url) {
+                    goldenDotPreview.innerHTML = `<img src="${data.url}" style="max-width: 200px; max-height: 200px; border-radius: 8px; border: 3px solid #ffd700;">`;
+                    if (removeGoldenDotBtn) removeGoldenDotBtn.style.display = 'inline-block';
+                }
+            })
+            .catch(error => console.error('Error loading golden dot:', error));
+        
+        if (goldenDotInput) {
+            goldenDotInput.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const formData = new FormData();
+                formData.append('image', file);
+                
+                try {
+                    const response = await fetch('/admin/upload_golden_dot', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        document.getElementById('message').innerHTML = 
+                            '<div class="success">' + result.message + '</div>';
+                        goldenDotPreview.innerHTML = 
+                            `<img src="/uploads/${result.filename}" style="max-width: 200px; max-height: 200px; border-radius: 8px; border: 3px solid #ffd700;">`;
+                        if (removeGoldenDotBtn) removeGoldenDotBtn.style.display = 'inline-block';
+                    } else {
+                        document.getElementById('message').innerHTML = 
+                            '<div class="error">' + result.error + '</div>';
+                    }
+                } catch (error) {
+                    document.getElementById('message').innerHTML = 
+                        '<div class="error">Error uploading golden dot image</div>';
+                }
+            });
+        }
+        
+        if (removeGoldenDotBtn) {
+            removeGoldenDotBtn.addEventListener('click', async () => {
+                if (confirm('Remove golden dot image? It will no longer appear in the mini-game.')) {
+                    try {
+                        const response = await fetch('/admin/remove_golden_dot', { method: 'POST' });
+                        const result = await response.json();
+                        if (result.success) {
+                            document.getElementById('message').innerHTML = 
+                                '<div class="success">' + result.message + '</div>';
+                            goldenDotPreview.innerHTML = '';
+                            removeGoldenDotBtn.style.display = 'none';
+                            if (goldenDotInput) goldenDotInput.value = '';
+                        }
+                    } catch (error) {
+                        document.getElementById('message').innerHTML = 
+                            '<div class="error">Error removing golden dot</div>';
+                    }
+                }
+            });
+        }
+        
         // Logout button
         const logoutBtn = document.getElementById('logoutBtn');
         if (logoutBtn) {
@@ -449,6 +640,36 @@
                 }
             });
         }
+        
+        // Click to enlarge for all admin photos (thumbnails and detail photos)
+        function setupPhotoEnlarge() {
+            document.querySelectorAll('.admin-thumbnail, .admin-detail-photo').forEach(img => {
+                img.addEventListener('click', function() {
+                    const modal = document.createElement('div');
+                    modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; display: flex; align-items: center; justify-content: center; cursor: pointer;';
+                    const enlargedImg = document.createElement('img');
+                    enlargedImg.src = this.src;
+                    enlargedImg.style.cssText = 'max-width: 90%; max-height: 90%; object-fit: contain; border-radius: 8px;';
+                    modal.appendChild(enlargedImg);
+                    document.body.appendChild(modal);
+                    modal.addEventListener('click', () => modal.remove());
+                });
+            });
+        }
+        
+        // Setup photo enlarge after page loads
+        setupPhotoEnlarge();
+        
+        // Re-setup after dynamic content changes (like after reveal/unreveal)
+        const originalFetch = window.fetch;
+        window.fetch = function(...args) {
+            return originalFetch.apply(this, args).then(response => {
+                if (response.ok && typeof args[0] === 'string' && (args[0].includes('/reveal_photo') || args[0].includes('/unreveal_photo'))) {
+                    setTimeout(setupPhotoEnlarge, 1100); // After reload delay
+                }
+                return response;
+            });
+        };
     </script>
     </div>
 </body>

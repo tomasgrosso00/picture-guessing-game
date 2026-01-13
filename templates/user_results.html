@@ -12,7 +12,12 @@
     <div class="magical-emoji">✨</div>
     <div class="magical-emoji">🎨</div>
     <div class="container">
-    <h1>Results 🏆✨</h1>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h1 style="margin: 0;">Results 🏆✨</h1>
+        <button onclick="location.reload()" class="btn btn-secondary" style="padding: 10px 20px; border: none; border-radius: 8px; background: #757575; color: white; cursor: pointer; font-size: 14px;">
+            🔄 Refresh
+        </button>
+    </div>
     
     {% if no_votes %}
     {% if waiting_for_voting %}
@@ -43,6 +48,36 @@
     </div>
     {% endif %}
     
+    <!-- Participants and Voters Info -->
+    {% if photos_with_guesses %}
+    <div style="margin-bottom: 20px; padding: 15px; background: #f5f5f5; border-radius: 8px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+            <div>
+                <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #667eea;">📸 Participants ({{ total_photos }}):</h3>
+                <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                    {% for item in photos_with_guesses %}
+                    <span style="padding: 4px 10px; background: white; border-radius: 12px; font-size: 13px; border: 1px solid #ddd;">
+                        {{ item.photo.submitter }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% if voters %}
+            <div>
+                <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #4caf50;">🗳️ Voters ({{ voters|length }}):</h3>
+                <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                    {% for voter in voters %}
+                    <span style="padding: 4px 10px; background: white; border-radius: 12px; font-size: 13px; border: 1px solid #4caf50;">
+                        {{ voter }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
     <!-- Voting Matrix Table -->
     {% if photos_with_guesses %}
     <div style="margin-bottom: 40px;">
@@ -60,7 +95,7 @@
                         {% for item in photos_with_guesses %}
                         <th style="padding: 12px; text-align: center; border: 1px solid #ddd; min-width: 120px;">
                             <div style="margin-bottom: 5px;">
-                                <img src="{{ url_for('uploaded_file', filename=item.photo.filename) }}" alt="Picture thumbnail" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px; border: 2px solid white;">
+                                <img src="{{ url_for('uploaded_file', filename=item.photo.filename) }}" alt="Picture thumbnail" class="results-thumbnail" style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px; border: 2px solid white; cursor: pointer;">
                             </div>
                             {% if item.is_revealed %}
                             <div style="font-weight: bold; margin-top: 5px;">{{ item.photo.submitter }}</div>
@@ -165,7 +200,8 @@
             <div style="flex: 0 0 300px;">
                 <img src="{{ url_for('uploaded_file', filename=item.photo.filename) }}" 
                      alt="Photo from {{ item.photo.submitter }}"
-                     style="width: 100%; max-height: 400px; object-fit: contain; border-radius: 8px; border: 2px solid #ccc;">
+                     class="results-photo"
+                     style="width: 100%; max-height: 400px; object-fit: contain; border-radius: 8px; border: 2px solid #ccc; cursor: pointer;">
             </div>
             
             <!-- Voting Details -->
@@ -221,23 +257,23 @@
     
     {% endif %}
     
-    <!-- Auto-refresh if not all photos revealed -->
-    {% if revealed_count < total_photos %}
+    <!-- Auto-refresh removed - users can manually refresh if needed -->
+    
     <script>
-        // Auto-refresh every 3 seconds to check for new reveals
-        setTimeout(() => {
-            location.reload();
-        }, 3000);
+        // Click to enlarge pictures
+        document.querySelectorAll('.results-photo, .results-thumbnail').forEach(img => {
+            img.addEventListener('click', function() {
+                const modal = document.createElement('div');
+                modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; display: flex; align-items: center; justify-content: center; cursor: pointer;';
+                const enlargedImg = document.createElement('img');
+                enlargedImg.src = this.src;
+                enlargedImg.style.cssText = 'max-width: 90%; max-height: 90%; object-fit: contain; border-radius: 8px;';
+                modal.appendChild(enlargedImg);
+                document.body.appendChild(modal);
+                modal.addEventListener('click', () => modal.remove());
+            });
+        });
     </script>
-    {% else %}
-    <script>
-        // Even if all photos are revealed, refresh every 5 seconds in case game host reveals more
-        // (in case game host restarts or adds more photos)
-        setInterval(() => {
-            location.reload();
-        }, 5000);
-    </script>
-    {% endif %}
     </div>
 </body>
 </html>

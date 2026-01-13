@@ -12,7 +12,12 @@
     <div class="magical-emoji">✨</div>
     <div class="magical-emoji">🎨</div>
     <div class="container">
-    <h1>Data Eng Picture Guessing Game 🦄✨</h1>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h1 style="margin: 0;">Data Eng Picture Guessing Game 🦄✨</h1>
+        <button onclick="location.reload()" class="btn btn-secondary" style="padding: 10px 20px; border: none; border-radius: 8px; background: #757575; color: white; cursor: pointer; font-size: 14px;">
+            🔄 Refresh
+        </button>
+    </div>
     
     {% if phase == 'collection' %}
     <h2>Upload Your Picture</h2>

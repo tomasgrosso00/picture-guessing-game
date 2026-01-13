@@ -12,8 +12,15 @@
     <div class="magical-emoji">✨</div>
     <div class="magical-emoji">🎨</div>
     <div class="container">
-    <h1>Voting 🗳️✨</h1>
-    <p style="text-align: center; color: #666; margin-bottom: 20px;">Guess who owns each picture. Vote silently. 🎯</p>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div>
+            <h1 style="margin: 0;">Voting 🗳️✨</h1>
+            <p style="text-align: left; color: #666; margin-top: 5px; margin-bottom: 0;">Guess who owns each picture. Vote silently. 🎯</p>
+        </div>
+        <button onclick="location.reload()" class="btn btn-secondary" style="padding: 10px 20px; border: none; border-radius: 8px; background: #757575; color: white; cursor: pointer; font-size: 14px;">
+            🔄 Refresh
+        </button>
+    </div>
     
     <div class="form-group">
         <label for="voterName">Your name:</label>
@@ -25,7 +32,9 @@
             {% for photo in photos %}
             <div class="photo-card">
                 <img src="{{ url_for('uploaded_file', filename=photo.filename) }}" 
-                     alt="Picture {{ loop.index }}">
+                     alt="Picture {{ loop.index }}"
+                     class="voting-photo"
+                     data-photo-id="{{ photo.id }}">
                 <div style="font-weight: bold; margin: 10px 0; color: #667eea;">Picture {{ loop.index }}</div>
                 <select name="vote_{{ photo.id }}" required class="vote-select" data-photo-id="{{ photo.id }}">
                     <option value="">Select...</option>
@@ -86,6 +95,20 @@
         
         // Initial update
         updateDropdownOptions();
+        
+        // Click to enlarge pictures
+        document.querySelectorAll('.voting-photo').forEach(img => {
+            img.addEventListener('click', function() {
+                const modal = document.createElement('div');
+                modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 10000; display: flex; align-items: center; justify-content: center; cursor: pointer;';
+                const enlargedImg = document.createElement('img');
+                enlargedImg.src = this.src;
+                enlargedImg.style.cssText = 'max-width: 90%; max-height: 90%; object-fit: contain; border-radius: 8px;';
+                modal.appendChild(enlargedImg);
+                document.body.appendChild(modal);
+                modal.addEventListener('click', () => modal.remove());
+            });
+        });
         
         document.getElementById('votingForm').addEventListener('submit', async (e) => {
             e.preventDefault();
