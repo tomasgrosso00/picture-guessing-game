@@ -153,7 +153,8 @@ def admin():
                          results=results_summary,
                          revealed_photos=data.get('revealed_photos', []),
                          photos_with_guesses=photos_with_guesses,
-                         votes_data=data.get('votes', {}))
+                         votes_data=data.get('votes', {}),
+                         golden_dot_image=data.get('golden_dot_image'))
 
 @app.route('/start_voting', methods=['POST'])
 def start_voting():
