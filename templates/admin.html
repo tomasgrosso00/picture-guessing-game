@@ -354,21 +354,6 @@
             </button>
         </div>
         <div id="goldenDotPreview" style="margin-top: 15px;"></div>
-        {% if photos %}
-        {% set data = load_game_data() %}
-        {% if data.get('golden_dot_image') %}
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                const goldenDotImage = '{{ data.get("golden_dot_image") }}';
-                if (goldenDotImage) {
-                    const preview = document.getElementById('goldenDotPreview');
-                    preview.innerHTML = `<img src="/uploads/${goldenDotImage}" style="max-width: 200px; max-height: 200px; border-radius: 8px; border: 3px solid #ffd700;">`;
-                    document.getElementById('removeGoldenDotBtn').style.display = 'inline-block';
-                }
-            });
-        </script>
-        {% endif %}
-        {% endif %}
     </div>
     
     <!-- Mini-Game Golden Dot Settings -->
